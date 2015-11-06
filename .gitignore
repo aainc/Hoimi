@@ -1,0 +1,13 @@
+VagrantFile
+.vagrant
+.idea
+**/reports
+**/vendor
+**/*.bak
+**/*.bk
+docroot/img
+.accessToken
+Gemfile.lock
+Gemfile
+.bundle
+cachegrind.out.*
