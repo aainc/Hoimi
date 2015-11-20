@@ -110,9 +110,6 @@ Recommended directory structure in use Hoimi is this.
             - resources
                 - config.php
             - boostrap.php
-        - lib
-            - Hoimi/src/Hoimi(Hoimi root)
-            - Mahotora/src/Mahotora(Mahotora root)
         - vendor(for Composer)
         - composer.json
     - docroot
