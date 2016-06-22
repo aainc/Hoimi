@@ -2,12 +2,17 @@
 namespace Hoimi\Session;
 
 use Hoimi\Config;
-
+interface StatementDummy {
+    public function bind_result();
+    public function execute();
+    public function bind_param();
+    public function close();
+    public function fetch();
+}
 class DatabaseDriverTest extends \PHPUnit_Framework_TestCase
 {
     private $connection = null;
     private $statement = null;
-    private $resultSet = null;
     /**
      * @var \Hoimi\Session\DatabaseDriver
      */
@@ -16,8 +21,7 @@ class DatabaseDriverTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->connection = \Phake::mock('\mysqli');
-        $this->statement = \Phake::mock('\mysqli_stmt');
-        $this->resultSet = \Phake::mock('\mysqli_stmt');
+        $this->statement = \Phake::mock('\Hoimi\Session\StatementDummy');
         $this->target = \Phake::partialMock('Hoimi\Session\DatabaseDriver', new Config());
         $this->target->setConnection($this->connection);
     }

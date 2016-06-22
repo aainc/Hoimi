@@ -11,6 +11,11 @@ class Session
     private $request = null;
     private $config = null;
     private $driver = null;
+    /**
+     * @var Bindable[]
+     */
+    private $listener = array();
+    private $flushed = false;
 
     /**
      * @param Request $request
@@ -20,6 +25,7 @@ class Session
     {
         $this->request = $request;
         $this->config = $config;
+        $this->flushed = false;
     }
 
     /**
@@ -57,17 +63,51 @@ class Session
      */
     public function set($key, $value)
     {
-        return $_SESSION[$key] = $value;
+
+        if ($this->flushed) {
+            throw new \RuntimeException('calling "set" after flushed');
+        }
+        if (is_object($key)) {
+            $key = serialize($key);
+        }
+        if (is_scalar($key) && strpos($key, '.') === false) {
+            $_SESSION[$key] = $value;
+        } else {
+            if (is_string($key)) {
+                $key = explode('.', $key);
+            }
+            $_SESSION = $this->copyRecursive($_SESSION, $key, $value);
+        }
+        return $this;
     }
+
 
     /**
      * @param $key
-     * @return mixed
+     * @param null $default
+     * @return mixed|null
      */
-    public function get($key)
+    public function get($key, $default = null)
     {
-        return $_SESSION[$key];
-    }
+        if (!isset($key)) {
+            throw new \InvalidArgumentException('$key is undefined');
+        }
+        $array = $_SESSION;
+        if (isset($array[$key])) return $array[$key];
+        $tmp = $array;
+        foreach (explode('.', $key) as $segment) {
+            if (!is_array($tmp) || !isset($tmp[$segment])) {
+                $tmp = null;
+                break;
+            } elseif (isset($tmp[$segment])) {
+                $tmp = $tmp[$segment];
+            } else {
+                $tmp = null;
+                break;
+            }
+        }
+        return isset($tmp) ? $tmp : $default;
+    }    
 
     /**
      * @param $key
@@ -103,6 +143,54 @@ class Session
      */
     public function flush()
     {
+        foreach ($this->listener as $bindable) {
+            $this->set($bindable->getSessionKey(), $bindable->getSessionContent());
+        }
         session_write_close();
+        $this->flushed = true;
+    }
+
+
+    /**
+     * @param $array
+     * @param $keys
+     * @param $value
+     * @return array
+     */
+    public function copyRecursive($array, $keys, $value)
+    {
+        is_array($array) || $array = [];
+        $key = array_shift($keys);
+        $array[$key] = $keys ? $this->copyRecursive(isset($array[$key]) ?: array(), $keys, $value) : $value;
+        return $array;
+    }
+
+    /**
+     * return flushed or not yet
+     * @return bool true=flushed, false=not yet
+     */
+    public function isFlushed()
+    {
+        return $this->flushed;
+    }
+
+    /**
+     * destructor.
+     * if flushed session not yet, do it.
+     */
+    public function __destruct()
+    {
+        if (!$this->flushed) {
+            $this->flush();
+        }
+    }
+
+    /**
+     * @param Bindable $obj
+     */
+    public function bind(Bindable $obj)
+    {
+        $obj->setSessionContent($this->get($obj->getSessionKey(), array()));
+        $this->listener[] = $obj;
     }
 }
