@@ -34,6 +34,9 @@ class Request implements Gettable
             $request = array();
             parse_str(file_get_contents('php://input'), $request);
             foreach ($request as $key => $val) $this->request[$key] = $val;
+        } elseif (isset($this->headers['CONTENT_TYPE']) && $this->headers['CONTENT_TYPE'] === 'application/json') {
+            $request = json_decode(file_get_contents('php://input'), true);
+            foreach ($request as $key => $val) $this->request[$key] = $val;
         }
     }
 
